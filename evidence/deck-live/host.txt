@@ -1,0 +1,9 @@
+collected_utc=2026-11-20T04:32:43Z
+kernel=Linux 7.2.7-valve2-2-neptune-72-g31504582a073 x86_64 GNU/Linux
+sys_vendor=Valve
+product_name=Jupiter
+board_name=Jupiter
+bios_version=F7A0133
+bios_date=
+enumerated_1022_149d=0
+unreadable_pci_ids=0

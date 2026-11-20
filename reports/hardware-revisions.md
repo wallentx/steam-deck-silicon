@@ -1,0 +1,36 @@
+# Magic Leap 2 hardware revisions and CVIP discovery
+
+Magic Leap documents a production change that allowed later headsets to omit the unused Bend Camera. The 1.2.1 bootloader also gained code to pass a wearable hardware-revision value to Android. In the same update, the x86 CVIP driver, its device ID, the BIOS device description, and the shipped DSP programs retained their earlier behavior or contents. The evidence supports a hardware compatibility change at the headset level. The specific mapping from serial group T2 to a part or silicon stepping remains **UNKNOWN**. [Official 1.2.1 changelog](https://developer-docs.magicleap.cloud/docs/releases/release-2023-july/1.2.1-os-release-notes/) · [Release and edition evidence](../evidence/revision-sources.md)
+
+## Which releases answer which question?
+
+| OS | AMD BSP | Catalog archive SHA-256 | Purpose in the comparison |
+|---|---|---|---|
+| 1.2.0 | R50 | cfec911a7e62b15dcc173b30e5b52398f41db3d6373b8e7567590fa3e1a85416 | This April build predates both published T2 compatibility floors. |
+| 1.2.1 | R50 | 91b6114bfa6412724d98f231fe050f9f3ba913167b4b58f07f82b1a2415a93ae | The July patch shares the R50 base and is the published MedTech T2 minimum. |
+| 1.3.1 | R53 | 527e0ec89bf81e758961c320bc99b16979f603af7ee6e4da50894eaa884582e6 | The parallel July release is the published Enterprise T2 minimum. |
+| 1.12.1 | R64 | 9747b3652e20746596b64b0b244bd23a047ba47d4eb3d392271cac08a615f28c | The previously investigated build provides the later production baseline. |
+
+Both July releases shipped on the same date. Their edition-specific compatibility floors do not identify exclusive firmware packages. All three older public archives use the demophon user flavor. Each downloaded archive matched the byte count and SHA-256 in Hub's metadata (the SHA-256 comparisons cover the full archive). Analysis was static. The input archives and extracted trees are under `work/revisions/<version>/`. [Catalog](https://thelab.magicleap.cloud/packages_mlhub/com.magicleap.ml2_firmware.zip) · [Compatibility matrix](https://developer-docs.magicleap.cloud/docs/releases/releases-overview/#hardware-and-software-compatibility-matrix)
+
+## Components across the boundary
+
+| Component | Result |
+|---|---|
+| x86 discovery and initialization | **CONFIRMED.** All four PCI driver records contain exactly one ID, AMD 1022:149d, with wildcard subsystem IDs and no class filter. Each matched probe enables PCI, maps the CVIP interface, counts MSI-X vectors, allocates interrupts, initializes Mero mailboxes and obtains an IOMMU domain. All three old build modules match AMDI0068 for temperature monitoring. [Decoded ID tables](../evidence/revision-pci.tsv) · [Call sites](../evidence/revision-host-probe.tsv) |
+| ACPI and early boot | **CONFIRMED.** All four DSDTs describe GP18.CVIP at downstream device 0, function 1. The six older BIOS variants have identical DSDTs and identical type 0x30 ABL payloads. Even in 1.12.1, the two ABL component bodies containing the CVIP partition lookup/copy diagnostics remain byte-identical. This comparison leaves other boot components and board configuration free to differ. [BIOS hashes, AML and loader evidence](../evidence/revision-bios.md) |
+| Board identity passed to Android | **CONFIRMED.** The 1.2.1 Android EFI bootloader adds the wearable configuration key lwear_hwrev and a formatter for androidboot.lwear.hardware.revision. The same identifiers appear in 1.3.1. A literal search of the three older builds' unpacked Android system/vendor files, host ramdisks, CVIP RO files, and DEX/shared-object/XML/RC/properties members inside system/vendor ZIP containers did not identify a named reader. Dynamically composed property names remain possible. No observed value associates this key with T2. [EFI call sites](../evidence/revision-bios.md) |
+| DSP and A55-side vision | **CONFIRMED.** Across 1.2.0 and 1.2.1, all 19 DSP .bin files, nine job maps, ten model resources and 37 configurations match byte for byte. Three changed ARM libraries have different .text sections, covering calibration I/O, calibration blocks and the head-pose package. Later 1.3.1 changes DSP programs while retaining the same host PCI endpoint. The protected A55 boot wrappers also change, so whole-file differences cannot identify an inner hardware modification. [Vision comparison](../evidence/revision-vision.md) |
+| Host userspace | **CONFIRMED.** Only 16 of 3,167 regular Android system files differ across the R50 patch. Both the main and initialization executable sections in the host kernel match exactly. The two 23,220-byte cvip-monitor .text sections differ in two bytes of an embedded release suffix (044 to 051). The thermal driver's executable section also matches despite the differing module files. The host perception calibration library and a vendor Bluetooth firmware component change. [Per-file and kernel-section SHA-256](../evidence/revision-host.tsv) |
+
+## A1 and A2 handling inside the CVIP clock driver
+
+Each x86 kernel contains a GSM clock reader named `_gsm_jrtc_get_ticks_check_hw` and separate implementations named `_gsm_jrtc_get_ticks_a1` and `_gsm_jrtc_get_ticks_a2`. Disassembly shows a real selection branch. It checks a tagged value, compares its low byte to 0xa2 and selects the A2 reader on a match. The other path can fall back to the A1 reader. Kernel virtual addresses for the low-byte comparison are ffffffff81a308ad in both R50 builds, ffffffff81b48326 in R53 and ffffffff81b567e6 in R64. In the same kernels, gsm_init explicitly looks up PCI 1022:149d before obtaining the shared interface. [Kernel hashes](../evidence/revision-host.tsv)
+
+**CONFIRMED** applies to driver support for two clock-reading variants as early as 1.2.0. The binaries cannot establish which variant ran on a particular shipped headset, whether the labels refer to an entire SoC mask revision, or how they relate to T0/T1/T2 and Mortable/PEQ. A retail T2 serial paired with a component-level engineering change notice, or a legitimate diagnostic that identifies both the wearable revision and actual silicon stepping, would discriminate these possibilities.
+
+## Steam Deck applicability
+
+The four releases provide one host PCI signature and one downstream ACPI location. The capture from the user's F7A0133 LCD Deck found neither the 1022:149d endpoint nor the GP18.CVIP child. The A1/A2 clock selection happens behind the same PCI interface and supplies no alternative enumeration signature. These observations add no evidence that a Linux driver can bring up the missing function on that Deck. Physical presence, power, reset, fuses and firmware compatibility remain **UNKNOWN**. [Live Deck PCI capture](../evidence/deck-live/pci.md) · [All 13 Deck ACPI tables](../evidence/deck-live/acpi.md)
+
+The most discriminating next comparison would use two identified ML2 units, one T0/T1 and one T2, on the same compatible OS. Record the serial group only, the wearable revision if exposed, PCI ID and PCI revision, and the camera inventory. Holding the OS constant would help separate hardware-dependent observations from release-to-release software changes. A PCI revision alone would still need corroboration before assigning a CVIP silicon stepping.
