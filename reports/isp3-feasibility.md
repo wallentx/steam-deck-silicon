@@ -1,5 +1,7 @@
 # Jupiter ISP3 memory processing — offline verdict
 
+The subsequent investigation located two firmware frame-info handlers with different package sizes and four empty ISP entries on Jupiter's ordinary graphics SMU mailbox. [Updated driver feasibility and offline tests](isp3-driver-feasibility.md)
+
 **Mero can skip the two CVIP buffer callbacks. A complete sensorless ISP3 frame path on the LCD Deck remains unproved.** With CVIP disabled in the driver configuration, stream setup bypasses the CVIP metadata/statistics buffers. The stock Mero image assigns that setting twice. The later assignment is true. On normal initialization, logical memory camera 3 inherits camera 1's profile but keeps ring 4, which the command inserter rejects. The three shipped sensor drivers report ordinary sensor type 0. A separate settings override could select memory type 4 on a physical camera with a valid ring. No stock producer supplying an input plane on that route was identified. [Function-level assessment and dependency matrix](../analysis/isp3-memory-path.md)
 
 **Live Deck check.** A subsequent Jupiter boot reported the predicted ISP bases `0x00018000` and `0x0240B000`. Its loaded AMDGPU build ID matches the analyzed Valve module. The boot journal lists ten blocks and omits ISP, and the Deck exposed no video or media node. [Live evidence and reproduction](../evidence/deck-live/isp3-boot-check.md)

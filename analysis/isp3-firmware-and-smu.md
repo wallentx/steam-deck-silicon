@@ -1,5 +1,7 @@
 # Which Mero ISP firmware and power interfaces would Jupiter need?
 
+The later [SMU image comparison](isp3-smu-compatibility.md) distinguishes the host message names below from the actual firmware handlers. Four ISP rows are empty on Jupiter's ordinary AMDGPU-facing mailbox. [ISP executable and boot analysis](isp3-firmware-boot.md)
+
 **CONFIRMED in the ML2 build 9601 binaries.** The two firmware files have different contents and different consumers. The AMDGPU module stages the wrapped ISP image for the PSP firmware-loading path. The camera ioctl requests the separate RAM file and releases it on the success path without passing its contents to the ISP. The five SMU message numbers used by the Mero ISP callbacks agree with Jupiter's published mapping, although their drivers expect different SMU interface versions. Acceptance of this firmware and power sequencing on Jupiter remain **UNKNOWN**. [Input archive and hashes](../evidence/artifacts.md) · [Offline verifier](../scripts/inspect-isp3-build.py)
 
 ## Firmware images and their consumers

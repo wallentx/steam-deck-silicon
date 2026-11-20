@@ -103,6 +103,23 @@ def inspect_firmware(image, ram):
     print(f"Raw RAM image {len(ram)} bytes, identical leading body bytes {prefix}")
 
 
+def inspect_frame_info_receiver(image, body_start, entry_offset):
+    # Each directory row contains a command ID and a linked Xtensa handler VA.
+    msg, handler = struct.unpack_from("<II", image, entry_offset)
+    if msg != 0x02050002:
+        raise ValueError("unexpected frame-info directory row")
+    origin = 0x60000000
+    pc = handler + 9
+    site = body_start + pc - origin
+    if image[site] != 0xc1:  # baseline Xtensa L32R a12, literal
+        raise ValueError("missing frame-info size literal load")
+    displacement = struct.unpack_from("<H", image, site + 1)[0] - 0x10000
+    literal = ((pc + 3) & ~3) + 4 * displacement
+    size, = struct.unpack_from("<I", image, body_start + literal - origin)
+    print(f"Frame-info row at file+{entry_offset:#x}: handler {handler:#x}, "
+          f"expected external bytes {size} (literal VA {literal:#x})")
+
+
 def inspect_tables(module):
     # readelf -SW and -sW on the pinned module locate .rodata and mero_message_map.
     rodata = 0x58cdf0
@@ -125,6 +142,8 @@ def main():
         files = read_inputs(args.work)
         inspect_camera(files[KERNEL], files[PROPERTIES])
         inspect_firmware(files[WRAPPED], files[RAM])
+        inspect_frame_info_receiver(files[WRAPPED], 0x200, 0x17038)
+        inspect_frame_info_receiver(files[RAM], 0, 0xb7d8)
         inspect_tables(files[MODULE])
     except (OSError, ValueError, struct.error) as exc:
         parser.exit(1, f"{exc}\n")
