@@ -2,7 +2,7 @@
 
 The original LCD Steam Deck reports a disabled **SATA storage controller**. Its graphics driver also lists an **image signal processor** that SteamOS leaves unused. The more intriguing possibility is a computer-vision accelerator like the one in the Magic Leap 2 headset. Valve’s BIOS contains code that knows about that accelerator, but Linux finds no device for its driver to claim. Whether the circuitry exists on the Deck die remains an open question.
 
-[Short report](reports/summary.md) · [Detailed findings](findings.md) · [Capability matrix](reports/capability-matrix.md)
+[Follow-up discoveries](reports/followup-summary.md) · [Original short report](reports/summary.md) · [Detailed findings](findings.md) · [Capability matrix](reports/capability-matrix.md)
 
 ## What did this Deck report?
 
